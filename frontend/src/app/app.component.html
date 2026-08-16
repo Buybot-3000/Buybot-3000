@@ -1,0 +1,14 @@
+<div class="app-layout" [class.retro-layout]="isRetroMode()">
+
+
+  <div class="content-wrapper">
+
+      <main class="main-content" [class.retro-main]="isRetroMode()">
+        <router-outlet></router-outlet>
+      </main>
+
+  </div>
+</div>
+
+<app-toast></app-toast>
+<app-confirm></app-confirm>

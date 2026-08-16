@@ -1,0 +1,90 @@
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  /* Harter Retro-Hintergrund statt weichem Blur */
+  background: rgba(0, 0, 0, 0.85);
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.confirm-modal {
+  width: 100%;
+  max-width: 420px;
+  text-align: center;
+  animation: popIn 0.2s cubic-bezier(0.25, 0.8, 0.25, 1);
+  padding: 24px;
+
+  /* Retro Panel Design */
+  background: var(--panel);
+  border: 1px solid var(--amber); /* Warnfarbe als Rand */
+  box-shadow: 0 0 24px rgba(255, 176, 0, 0.15), inset 0 0 40px rgba(0, 0, 0, 0.6);
+  font-family: 'Share Tech Mono', 'Courier New', monospace;
+
+  h3 {
+    font-family: 'VT323', monospace;
+    color: var(--amber);
+    margin: 1rem 0 0.5rem 0;
+    font-size: 26px;
+    letter-spacing: 1px;
+    text-shadow: 0 0 6px rgba(255, 176, 0, 0.6);
+  }
+
+  p {
+    color: var(--green);
+    font-size: 15px;
+    line-height: 1.5;
+    margin-bottom: 2rem;
+  }
+}
+
+.confirm-icon {
+  font-size: 3.5rem;
+  color: var(--amber);
+  text-shadow: 0 0 12px rgba(255, 176, 0, 0.8);
+}
+
+.confirm-actions {
+  display: flex;
+  gap: 14px;
+
+  button {
+    flex: 1;
+    justify-content: center;
+    background: transparent;
+    font-family: 'VT323', monospace;
+    font-size: 18px;
+    padding: 8px 18px;
+    cursor: pointer;
+    letter-spacing: 1px;
+  }
+}
+
+/* Sekundärer Button (Abbrechen) */
+.btn-secondary {
+  border: 1px solid var(--green-dim);
+  color: var(--green-dim);
+
+  &:hover {
+    border-color: var(--green);
+    color: var(--green);
+    background: rgba(51, 255, 51, 0.05);
+  }
+}
+
+/* Primärer Button (Gefahr/Bestätigen) */
+.btn-primary.btn-danger {
+  border: 1px solid var(--red);
+  color: var(--red);
+
+  &:hover {
+    background: var(--red);
+    color: #000;
+  }
+}
+
+@keyframes popIn {
+  from { transform: scale(0.95); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}

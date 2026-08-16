@@ -1,0 +1,1011 @@
+/* Oben in der SCSS Datei */
+:host {
+  display: block;
+  padding: 24px;
+  background-color: var(--bg);
+  color: var(--green);
+  font-family: 'Share Tech Mono', 'Courier New', monospace;
+  min-height: 100vh;
+  background-image: repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.15) 0px, rgba(0, 0, 0, 0.15) 1px, transparent 1px, transparent 3px);
+}
+
+.crt {
+  max-width: 1080px;
+  margin: 0 auto;
+  border: 2px solid var(--green-dim);
+  border-radius: 6px;
+  padding: 20px;
+  background: var(--panel);
+  box-shadow: 0 0 24px rgba(51, 255, 51, 0.15), inset 0 0 40px rgba(0, 0, 0, 0.6);
+  position: relative;
+}
+
+.crt::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(0deg, rgba(51, 255, 51, 0.03) 0px, rgba(51, 255, 51, 0.03) 1px, transparent 1px, transparent 2px);
+  border-radius: 6px;
+}
+
+h1, h2, h3 {
+  font-family: 'VT323', monospace;
+  letter-spacing: 1px;
+  text-shadow: 0 0 6px rgba(51, 255, 51, 0.6);
+}
+
+.titlebar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid var(--green-dim);
+  padding-bottom: 8px;
+  margin-bottom: 16px;
+}
+
+.titlebar .brand {
+  font-family: 'VT323', monospace;
+  font-size: 28px;
+}
+
+.titlebar .clock {
+  font-size: 12px;
+  color: var(--green-dim);
+}
+
+.titlebar .header-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.injector-badge {
+  font-size: 12px;
+  color: var(--green-bright);
+  border: 1px solid var(--green-dim);
+  padding: 3px 10px;
+  cursor: help;
+}
+
+.injector-badge .num {
+  font-family: 'VT323', monospace;
+  font-size: 15px;
+  margin-left: 4px;
+}
+
+.tutorial-steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  counter-reset: tut;
+}
+
+.tutorial-steps li {
+  counter-increment: tut;
+  margin-bottom: 12px;
+  padding-left: 34px;
+  position: relative;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.tutorial-steps li::before {
+  content: counter(tut);
+  position: absolute;
+  left: 0;
+  top: 0;
+  border: 1px solid var(--green-dim);
+  width: 22px;
+  height: 22px;
+  text-align: center;
+  line-height: 20px;
+  font-family: 'VT323', monospace;
+  font-size: 14px;
+  color: var(--green-bright);
+}
+
+.tutorial-steps b {
+  color: var(--green-bright);
+}
+
+.esi-status {
+  font-size: 11px;
+  color: var(--green-dim);
+  margin-top: 6px;
+}
+
+.contract-row-ok {
+  color: var(--green-bright);
+}
+
+.contract-row-warn {
+  color: var(--amber);
+}
+
+.bot-row {
+  display: flex;
+  gap: 18px;
+  align-items: flex-start;
+  margin-bottom: 18px;
+}
+
+.face {
+  font-family: 'VT323', monospace;
+  font-size: 40px;
+  line-height: 1;
+  border: 1px solid var(--green-dim);
+  padding: 14px 20px;
+  min-width: 110px;
+  text-align: center;
+  background: #020602;
+  text-shadow: 0 0 10px rgba(51, 255, 51, 0.8);
+  white-space: nowrap;
+}
+
+@keyframes bracketBreathe {
+  0%, 100% {
+    transform: scaleY(1);
+  }
+  50% {
+    transform: scaleY(1.18);
+  }
+}
+
+@keyframes eyeBob {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-3px);
+  }
+}
+
+.face .bracket {
+  display: inline-block;
+  animation: bracketBreathe 2.6s ease-in-out infinite;
+}
+
+.face .bracket.right {
+  animation-delay: 0.15s;
+}
+
+.face .eyes {
+  display: inline-block;
+  animation: eyeBob 2.3s ease-in-out infinite;
+}
+
+.bubble {
+  position: relative;
+  flex: 1;
+  border: 1px solid var(--green-dim);
+  background: #020602;
+  padding: 12px 14px;
+  min-height: 66px;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.bubble::before {
+  content: "";
+  position: absolute;
+  left: -9px;
+  top: 22px;
+  border: 5px solid transparent;
+  border-right-color: var(--green-dim);
+}
+
+.bubble .tag {
+  color: var(--green-dim);
+  font-size: 11px;
+  display: block;
+  margin-bottom: 4px;
+}
+
+.cursor {
+  display: inline-block;
+  width: 8px;
+  background: var(--green);
+  margin-left: 2px;
+  height: 14px;
+  vertical-align: -2px;
+  animation: blink 1s steps(2) infinite;
+}
+
+fieldset {
+  border: 1px solid var(--green-dim);
+  margin-bottom: 16px;
+  padding: 12px 14px;
+}
+
+legend {
+  font-family: 'VT323', monospace;
+  font-size: 16px;
+  padding: 0 6px;
+}
+
+label {
+  display: block;
+  font-size: 12px;
+  color: var(--green-dim);
+  margin-bottom: 4px;
+}
+
+textarea, select, input[type=text], input[type=password], input[type=number] {
+  width: 100%;
+  background: #020602;
+  color: var(--green-bright);
+  border: 1px solid var(--green-dim);
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 13px;
+  padding: 8px;
+  outline: none;
+}
+
+textarea:focus, select:focus, input:focus {
+  border-color: var(--green);
+}
+
+textarea {
+  min-height: 150px;
+  resize: vertical;
+}
+
+textarea.phrases {
+  min-height: 70px;
+}
+
+.row {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.row > div {
+  flex: 1;
+  min-width: 220px;
+}
+
+button {
+  background: transparent;
+  border: 1px solid var(--green);
+  color: var(--green);
+  font-family: 'VT323', monospace;
+  font-size: 18px;
+  padding: 8px 18px;
+  cursor: pointer;
+  letter-spacing: 1px;
+}
+
+button:hover {
+  background: var(--green);
+  color: #000;
+}
+
+button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+button:disabled:hover {
+  background: transparent;
+  color: var(--green);
+}
+
+button.small {
+  font-size: 13px;
+  padding: 4px 10px;
+}
+
+button.danger {
+  border-color: var(--red);
+  color: var(--red);
+}
+
+button.danger:hover {
+  background: var(--red);
+  color: #000;
+}
+
+.output-wrap {
+  border: 1px solid var(--green-dim);
+  background: #020602;
+  max-height: 440px;
+  overflow: auto;
+}
+
+.output-empty {
+  padding: 14px;
+  font-size: 12.5px;
+  color: var(--green-dim);
+}
+
+table.output-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12.5px;
+  table-layout: fixed;
+}
+
+table.output-table col.col-qty {
+  width: 9%;
+}
+
+table.output-table col.col-item {
+  width: 32%;
+}
+
+table.output-table col.col-vol {
+  width: 13%;
+}
+
+table.output-table col.col-status {
+  width: 27%;
+}
+
+table.output-table col.col-price {
+  width: 19%;
+}
+
+table.output-table th, table.output-table td {
+  border-bottom: 1px solid rgba(31, 157, 31, 0.35);
+  border-right: 1px solid rgba(31, 157, 31, 0.35);
+  padding: 6px 9px;
+  text-align: right;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+table.output-table th:last-child, table.output-table td:last-child {
+  border-right: none;
+}
+
+table.output-table th {
+  text-align: right;
+  color: var(--green-bright);
+  font-family: 'VT323', monospace;
+  font-size: 16px;
+  letter-spacing: 0.5px;
+  border-bottom: 1px solid var(--green-dim);
+  position: sticky;
+  top: 0;
+  background: #020602;
+}
+
+table.output-table td:nth-child(2), table.output-table th:nth-child(2) {
+  text-align: left;
+}
+
+table.output-table td:nth-child(4), table.output-table th:nth-child(4) {
+  text-align: left;
+}
+
+table.output-table tbody tr:hover td {
+  background: rgba(51, 255, 51, 0.07);
+  cursor: default;
+}
+
+table.output-table td.status-ok {
+  color: var(--green-bright);
+}
+
+table.output-table td.status-err {
+  color: var(--red);
+}
+
+table.output-table td.status-warn {
+  color: var(--amber);
+}
+
+table.output-table td.price-cell[title] {
+  cursor: help;
+}
+
+.result-meta {
+  font-size: 11px;
+  color: var(--green-dim);
+  margin-top: 6px;
+}
+
+.result-meta span[title] {
+  cursor: help;
+  border-bottom: 1px dotted var(--green-dim);
+}
+
+.summary-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  justify-content: flex-end;
+  margin-top: 10px;
+  border: 1px solid var(--green-dim);
+  padding: 10px 12px;
+  background: #020602;
+}
+
+.summary-bar .label {
+  font-size: 12px;
+  color: var(--green-dim);
+  margin-right: auto;
+}
+
+.summary-bar .total {
+  font-family: 'VT323', monospace;
+  font-size: 22px;
+  color: var(--green-bright);
+}
+
+.footer-links {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 10px;
+  font-size: 11px;
+  color: var(--green-dim);
+}
+
+.footer-links a {
+  color: var(--green-dim);
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.75);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+}
+
+.modal-overlay.open {
+  display: flex;
+}
+
+.modal {
+  background: var(--panel);
+  border: 1px solid var(--green);
+  padding: 20px;
+  width: min(680px, 92vw);
+  max-height: 86vh;
+  overflow-y: auto;
+}
+
+.close-x {
+  float: right;
+  cursor: pointer;
+  color: var(--green-dim);
+}
+
+.close-x:hover {
+  color: var(--red);
+}
+
+table.admin-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  margin-bottom: 10px;
+}
+
+table.admin-table th, table.admin-table td {
+  border: 1px solid var(--green-dim);
+  padding: 5px 6px;
+  text-align: left;
+}
+
+.tag-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.tag-chip {
+  border: 1px solid var(--green-dim);
+  padding: 2px 8px;
+  font-size: 11px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.tag-chip span.x {
+  cursor: pointer;
+  color: var(--red);
+}
+
+.hint {
+  font-size: 11px;
+  color: var(--green-dim);
+  margin-top: 4px;
+}
+
+@keyframes blink {
+  50% {
+    opacity: 0;
+  }
+}
+
+/* =========================================
+   SPRACHUMSCHALTER (Länderkennung statt Flagge)
+   ========================================= */
+.lang-switch {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 11px;
+  padding: 3px 8px;
+  letter-spacing: 0;
+  border-color: var(--green-dim);
+  color: var(--green-dim);
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.lang-switch:hover {
+  background: transparent;
+  border-color: var(--green);
+  color: var(--green);
+}
+
+.lang-switch .active {
+  color: var(--green-bright);
+}
+
+.lang-switch .sep {
+  opacity: 0.5;
+}
+
+.titlebar .clock .clock-label {
+  opacity: 0.65;
+  margin-right: 4px;
+}
+
+/* =========================================
+   WARTUNGSMODUS
+   ========================================= */
+.maintenance-banner {
+  border: 1px solid var(--amber);
+  background: rgba(255, 176, 0, 0.08);
+  padding: 12px 14px;
+  margin-bottom: 16px;
+}
+
+.maintenance-title {
+  font-family: 'VT323', monospace;
+  font-size: 22px;
+  color: var(--amber);
+  letter-spacing: 1px;
+}
+
+.maintenance-text {
+  font-size: 12.5px;
+  color: var(--green-dim);
+  margin-top: 4px;
+  line-height: 1.5;
+}
+
+fieldset.disabled-block {
+  opacity: 0.55;
+}
+
+/* =========================================
+   SCHRITT 2 - VERTRAG ERSTELLEN
+   ========================================= */
+.contract-block {
+  border-color: var(--green);
+}
+
+.contract-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(240px, 1fr));
+  gap: 8px 18px;
+  margin: 10px 0 12px;
+}
+
+.contract-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  border-left: 2px solid var(--green-dim);
+  padding-left: 10px;
+}
+
+.contract-cell .k {
+  font-size: 11px;
+  color: var(--green-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.contract-cell .v {
+  font-size: 13.5px;
+  color: var(--green-bright);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.contract-cell .v.strong {
+  font-family: 'VT323', monospace;
+  font-size: 20px;
+}
+
+.contract-cell .v .muted {
+  color: var(--amber);
+  font-size: 12px;
+}
+
+button.ghost {
+  border-color: var(--green-dim);
+  color: var(--green-dim);
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 11px;
+  padding: 2px 8px;
+}
+
+button.ghost:hover {
+  background: transparent;
+  border-color: var(--green);
+  color: var(--green);
+}
+
+.contract-warn {
+  border: 1px solid var(--amber);
+  color: var(--amber);
+  font-size: 12px;
+  padding: 8px 10px;
+  margin-bottom: 10px;
+  line-height: 1.5;
+}
+
+.contract-note {
+  border-top: 1px dashed var(--green-dim);
+  margin-top: 10px;
+  padding-top: 8px;
+  font-size: 12px;
+  color: var(--green-dim);
+  white-space: pre-line;
+  line-height: 1.5;
+}
+
+.contract-steps {
+  margin-top: 4px;
+}
+
+/* =========================================
+   TUTORIAL - TABS & STATUS-LEGENDE
+   ========================================= */
+.tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  border-bottom: 1px solid var(--green-dim);
+  margin: 10px 0 14px;
+}
+
+button.tab {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 12px;
+  padding: 5px 12px;
+  border: 1px solid var(--green-dim);
+  border-bottom: none;
+  color: var(--green-dim);
+  margin-bottom: -1px;
+  letter-spacing: 0;
+}
+
+button.tab:hover {
+  background: transparent;
+  color: var(--green);
+  border-color: var(--green);
+}
+
+button.tab.active {
+  color: var(--green-bright);
+  border-color: var(--green);
+  background: rgba(51, 255, 51, 0.08);
+}
+
+.status-legend {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.status-legend li {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  font-size: 13px;
+  line-height: 1.5;
+  margin-bottom: 8px;
+}
+
+.status-legend .badge {
+  flex: 0 0 auto;
+  border: 1px solid currentColor;
+  padding: 1px 7px;
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.status-ok {
+  color: var(--green-bright);
+}
+
+.status-warn {
+  color: var(--amber);
+}
+
+.status-err {
+  color: var(--red);
+}
+
+/* =========================================
+   REPROCESSING-KENNZEICHNUNG
+   ========================================= */
+.repro-chip {
+  border: 1px solid var(--amber);
+  color: var(--amber);
+  font-size: 9px;
+  letter-spacing: 0.5px;
+  padding: 0 4px;
+  line-height: 14px;
+}
+
+label.check-inline {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  font-size: 12px;
+  color: var(--green);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+label.check-inline input[type=checkbox] {
+  width: auto;
+  margin: 0;
+}
+
+.repro-mark {
+  color: var(--amber);
+  cursor: help;
+  margin-left: 4px;
+}
+
+/* =========================================
+   AUFKLAPPBARE ABSCHNITTE IM ADMIN-PANEL
+   Lange Listen bleiben zu, bis man sie braucht.
+   ========================================= */
+button.section-toggle {
+  font-family: 'VT323', monospace;
+  font-size: 16px;
+  letter-spacing: 1px;
+  border: none;
+  padding: 0;
+  color: var(--green);
+  background: transparent;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+button.section-toggle:hover {
+  background: transparent;
+  color: var(--green-bright);
+}
+
+button.section-toggle .marker {
+  color: var(--green-dim);
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 13px;
+}
+
+button.section-toggle:hover .marker {
+  color: var(--green-bright);
+}
+
+/* Eigener Scrollbereich, damit eine lange Liste nicht alles darunter wegschiebt */
+.table-scroll {
+  max-height: 340px;
+  overflow: auto;
+  border: 1px solid var(--green-dim);
+  background: #020602;
+}
+
+.table-scroll table.admin-table {
+  margin-bottom: 0;
+}
+
+/* Kopfzeile bleibt beim Scrollen stehen */
+table.admin-table.sticky-head th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: #041004;
+}
+
+/* =========================================
+   PRÜFBERICHTE IM ADMIN-PANEL
+   ========================================= */
+.check-detail {
+  font-size: 12px;
+  color: var(--green-dim);
+  line-height: 1.6;
+  padding: 4px 2px;
+}
+
+.check-detail b {
+  color: var(--green-bright);
+}
+
+.check-block {
+  margin-top: 6px;
+}
+
+.check-detail pre.notify-error {
+  border-color: var(--red);
+  color: var(--red);
+}
+
+/* Lebenszeichen der automatischen Vertragsprüfung */
+.scheduler-status {
+  border: 1px solid var(--green-dim);
+  background: #020602;
+  padding: 8px 10px;
+  margin-top: 10px;
+  font-size: 12px;
+}
+
+.scheduler-status .status-line {
+  display: flex;
+  gap: 10px;
+  align-items: baseline;
+  line-height: 1.6;
+}
+
+.scheduler-status .status-line .k {
+  flex: 0 0 130px;
+  color: var(--green-dim);
+  text-transform: uppercase;
+  font-size: 10.5px;
+  letter-spacing: 0.5px;
+}
+
+.check-detail pre {
+  margin: 4px 0 0;
+  padding: 8px;
+  border: 1px solid var(--green-dim);
+  background: #020602;
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 11.5px;
+  color: var(--green);
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 240px;
+  overflow: auto;
+}
+
+/* =========================================
+   HANDY-WEICHE - Buybot lebt vom EVE-Client,
+   den es auf dem Telefon nicht gibt.
+   ========================================= */
+.mobile-gate {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  background: var(--bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background-image: repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.15) 0px, rgba(0, 0, 0, 0.15) 1px, transparent 1px, transparent 3px);
+}
+
+.mobile-card {
+  border: 1px solid var(--green);
+  background: var(--panel);
+  padding: 22px 18px;
+  max-width: 460px;
+  text-align: center;
+  box-shadow: 0 0 24px rgba(51, 255, 51, 0.15);
+}
+
+.mobile-face {
+  font-family: 'VT323', monospace;
+  font-size: 34px;
+  color: var(--green-bright);
+  text-shadow: 0 0 10px rgba(51, 255, 51, 0.8);
+  margin-bottom: 8px;
+}
+
+.mobile-card h3 {
+  margin: 0 0 10px;
+  font-size: 24px;
+}
+
+.mobile-card p {
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--green-dim);
+  margin: 0 0 10px;
+}
+
+.mobile-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  margin-top: 14px;
+  flex-wrap: wrap;
+}
+
+/* =========================================
+   KLEINERE BILDSCHIRME (Laptop / Tablet)
+   ========================================= */
+@media (max-width: 1024px) {
+  :host {
+    padding: 14px;
+  }
+
+  .crt {
+    padding: 14px;
+  }
+
+  .titlebar .brand {
+    font-size: 24px;
+  }
+
+  .contract-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 860px) {
+  .titlebar {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .titlebar .header-right {
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .bot-row {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .face {
+    align-self: flex-start;
+  }
+
+  .bubble::before {
+    display: none;
+  }
+
+  .row > div {
+    min-width: 100%;
+  }
+
+  table.output-table {
+    table-layout: auto;
+    font-size: 11.5px;
+  }
+
+  .summary-bar {
+    flex-wrap: wrap;
+  }
+
+  .footer-links {
+    flex-direction: column;
+    gap: 6px;
+  }
+}

@@ -1,0 +1,54 @@
+:root {
+  --green: #33ff33;
+  --green-dim: #1f9d1f;
+  --green-bright: #7CFF7C;
+  --bg: #050805;
+  --panel: #0a120a;
+  --red: #ff4444;
+  --amber: #ffb000;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg);
+  color: var(--green);
+  font-family: 'Share Tech Mono', 'Courier New', monospace;
+  /* Verhindert die äußerste Scrollbar, da die App.Component das Scrolling übernimmt */
+  height: 100vh;
+  overflow: hidden;
+}
+
+body {
+  background-image: repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.15) 0px, rgba(0, 0, 0, 0.15) 1px, transparent 1px, transparent 3px);
+}
+
+/* =========================================
+   RETRO SCROLLBAR STYLING
+   ========================================= */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg);
+  border-left: 1px solid var(--green-dim);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--green-dim);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--green);
+}
+
+/* Die Ecke unten rechts, wenn eine horizontale und vertikale Scrollbar aufeinander treffen */
+::-webkit-scrollbar-corner {
+  background: var(--bg);
+}
