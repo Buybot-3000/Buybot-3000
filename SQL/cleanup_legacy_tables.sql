@@ -74,7 +74,10 @@ DROP TABLE IF EXISTS evesde."planetSchematics";
 DROP TABLE IF EXISTS evesde."planetSchematicsPinMap";
 DROP TABLE IF EXISTS evesde."planetSchematicsTypeMap";
 
--- Von Hibernate frueher versehentlich angelegte Doppel der SDE-Tabellen
+-- Leere Doppel der SDE-Tabellen. Hibernate hat sie angelegt, weil zwei Entitaeten
+-- auf inv_categories/inv_groups zeigten statt auf die importierten "invCategories"
+-- und "invGroups". Beide Entitaeten sind korrigiert bzw. entfernt, die Tabellen
+-- werden also nicht neu angelegt.
 DROP TABLE IF EXISTS evesde.inv_categories;
 DROP TABLE IF EXISTS evesde.inv_groups;
 
