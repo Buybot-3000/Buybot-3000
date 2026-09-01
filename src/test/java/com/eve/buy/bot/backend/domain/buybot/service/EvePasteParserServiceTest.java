@@ -32,12 +32,12 @@ class EvePasteParserServiceTest {
 
     /** Kleiner Ausschnitt der Statikdatenbank für die Tests. */
     private static final Map<String, TypeDetails> SDE = Map.of(
-            "tritanium", new TypeDetails(34L, "Tritanium", 0.01, 4L),
-            "pyerite", new TypeDetails(35L, "Pyerite", 0.01, 4L),
-            "mexallon", new TypeDetails(36L, "Mexallon", 0.01, 4L),
-            "veldspar", new TypeDetails(1230L, "Veldspar", 0.1, 25L),
-            "antimatter charge m", new TypeDetails(222L, "Antimatter Charge M", 0.0125, 8L),
-            "rifter", new TypeDetails(587L, "Rifter", 27289.0, 6L));
+            "tritanium", new TypeDetails(34L, "Tritanium", 0.01, 18L, 4L),
+            "pyerite", new TypeDetails(35L, "Pyerite", 0.01, 18L, 4L),
+            "mexallon", new TypeDetails(36L, "Mexallon", 0.01, 18L, 4L),
+            "veldspar", new TypeDetails(1230L, "Veldspar", 0.1, 462L, 25L),
+            "antimatter charge m", new TypeDetails(222L, "Antimatter Charge M", 0.0125, 83L, 8L),
+            "rifter", new TypeDetails(587L, "Rifter", 27289.0, 25L, 6L));
 
     @Mock
     private InvTypeRepository invTypeRepository;
@@ -175,8 +175,13 @@ class EvePasteParserServiceTest {
      * @param volume     Volumen je Einheit
      * @param categoryId Kategorie des Items
      */
-    private record TypeDetails(Long typeId, String typeName, Double volume, Long categoryId)
+    private record TypeDetails(Long typeId, String typeName, Double volume, Long groupId, Long categoryId)
             implements TypeDetailsProjection {
+
+        @Override
+        public Long getGroupId() {
+            return groupId;
+        }
 
         @Override
         public Long getTypeId() {

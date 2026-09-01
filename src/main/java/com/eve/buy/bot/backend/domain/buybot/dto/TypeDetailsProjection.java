@@ -5,5 +5,6 @@ public interface TypeDetailsProjection {
     Long getTypeId();
     String getTypeName();
     Double getVolume();
+    Long getGroupId();
     Long getCategoryId();
 }

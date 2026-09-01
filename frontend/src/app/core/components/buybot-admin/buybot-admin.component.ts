@@ -1,19 +1,7 @@
 import { Component, EventEmitter, OnDestroy, OnInit, Output, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { DatePipe, DecimalPipe } from '@angular/common';
-import {
-  BuybotAdminService,
-  AdminConfig,
-  AdminLocation,
-  AdminCategory,
-  AdminType,
-  LinkedCharacter,
-  ContractCheckResult,
-  ContractCheckStatus,
-  AuditEntry,
-  AuditCategory,
-  AuditSeverity
-} from '../../services/buybot-admin.service';
+import { BuybotAdminService, AdminConfig, AdminLocation, AdminCategory, AdminGroup, AdminType, LinkedCharacter, ContractCheckResult, ContractCheckStatus, AuditEntry, AuditCategory, AuditSeverity } from '../../services/buybot-admin.service';
 import { ToastService } from '../../services/toast.service';
 import { ConfirmService } from '../../services/confirm.service';
 
@@ -41,6 +29,7 @@ export class BuybotAdminComponent implements OnInit, OnDestroy {
 
   locations: AdminLocation[] = [];
   categories: AdminCategory[] = [];
+  groups: AdminGroup[] = [];
   types: AdminType[] = [];
   characters: LinkedCharacter[] = [];
   checkResults: ContractCheckResult[] = [];
@@ -67,6 +56,8 @@ export class BuybotAdminComponent implements OnInit, OnDestroy {
   // Formular-Modelle für neue Einträge
   newLoc: AdminLocation = { name: '', transportFee: 0, securityFee: 0 };
   newCat = { name: '', modifier: 90, useReprocessedValue: false };
+  newGroup = { name: '', category: '', modifier: 90, isBlacklisted: false, useReprocessedValue: false,
+               reprocessingRate: null as number | null };
   newType = { name: '', modifier: 90, isBlacklisted: false, useReprocessedValue: false };
 
   ngOnInit() {
@@ -131,6 +122,7 @@ export class BuybotAdminComponent implements OnInit, OnDestroy {
     this.adminService.getConfig().subscribe(c => this.config = this.normalize(c));
     this.adminService.getLocations().subscribe(l => this.locations = l);
     this.adminService.getCategories().subscribe(c => this.categories = c);
+    this.adminService.getGroups().subscribe(g => this.groups = g);
     this.adminService.getTypes().subscribe(t => this.types = t);
     this.adminService.getLinkedCharacters().subscribe({
       next: (chars) => this.characters = chars,
@@ -226,6 +218,94 @@ export class BuybotAdminComponent implements OnInit, OnDestroy {
       this.adminService.deleteCategory(id).subscribe(() => {
         this.categories = this.categories.filter(c => c.categoryId !== id);
         this.toastService.info('Kategorie entfernt.');
+      });
+    }
+  }
+
+  addGroup() {
+    if (!this.newGroup.name) return;
+
+    this.adminService.addGroup({
+      groupName: this.newGroup.name.trim(),
+      categoryName: this.newGroup.category.trim() || null,
+      modifier: this.newGroup.modifier,
+      isBlacklisted: this.newGroup.isBlacklisted,
+      useReprocessedValue: this.newGroup.useReprocessedValue,
+      reprocessingRate: this.newGroup.reprocessingRate
+    }).subscribe({
+      next: () => {
+        this.newGroup.name = '';
+        this.newGroup.category = '';
+        this.newGroup.isBlacklisted = false;
+        this.newGroup.useReprocessedValue = false;
+        this.newGroup.reprocessingRate = null;
+        this.adminService.getGroups().subscribe(g => this.groups = g);
+        this.toastService.success('Gruppen-Regel erfolgreich gespeichert.');
+      },
+      // Bei doppelt vergebenen Gruppennamen nennt der Server die Kategorien - diese
+      // Meldung hilft weiter als ein pauschales "nicht gefunden".
+      error: (fehler) => this.toastService.error(
+        fehler?.error?.error || 'Gruppe in der EVE SDE nicht gefunden!')
+    });
+  }
+
+  /**
+   * Beschriftung der Reprocessed-Spalte einer Gruppe.
+   *
+   * @param group die Regel
+   * @return was in der Spalte steht
+   */
+  groupReprocessLabel(group: AdminGroup): string {
+    if (!group.useReprocessedValue) {
+      return '-';
+    }
+    return group.reprocessable === false ? 'JA (wirkungslos)' : 'JA';
+  }
+
+  /**
+   * Farbe der Reprocessed-Spalte einer Gruppe.
+   *
+   * @param group die Regel
+   * @return die CSS-Klasse
+   */
+  groupReprocessClass(group: AdminGroup): string {
+    if (!group.useReprocessedValue) {
+      return '';
+    }
+    return group.reprocessable === false ? 'status-warn' : 'status-ok';
+  }
+
+  /**
+   * Beschriftung der Ausbeute-Spalte einer Gruppe.
+   *
+   * Ohne eigene Angabe gilt die globale Ausbeute - das soll man sehen, statt eine leere
+   * Zelle als "keine Ausbeute" zu lesen.
+   *
+   * @param group die Regel
+   * @return was in der Spalte steht
+   */
+  rateLabel(group: AdminGroup): string {
+    if (!group.useReprocessedValue) {
+      return '-';
+    }
+    if (group.reprocessingRate === null || group.reprocessingRate === undefined) {
+      return `global (${this.config.reprocessingRate}%)`;
+    }
+    return group.reprocessingRate + '%';
+  }
+
+  async deleteGroup(id: number) {
+    const confirmed = await this.confirmService.ask(
+      'Gruppen-Regel löschen?',
+      'Soll diese Regel für die ganze Gruppe wirklich gelöscht werden?',
+      'LÖSCHEN',
+      'ABBRECHEN'
+    );
+
+    if (confirmed) {
+      this.adminService.deleteGroup(id).subscribe(() => {
+        this.groups = this.groups.filter(g => g.groupId !== id);
+        this.toastService.info('Gruppen-Regel entfernt.');
       });
     }
   }

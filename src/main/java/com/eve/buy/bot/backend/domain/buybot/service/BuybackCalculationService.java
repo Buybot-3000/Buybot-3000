@@ -6,10 +6,12 @@ import com.eve.buy.bot.backend.domain.buybot.dto.ReprocessMaterialProjection;
 import com.eve.buy.bot.backend.domain.buybot.dto.TypeDetailsProjection;
 import com.eve.buy.bot.backend.domain.buybot.entity.BuybackCategoryRule;
 import com.eve.buy.bot.backend.domain.buybot.entity.BuybackConfig;
+import com.eve.buy.bot.backend.domain.buybot.entity.BuybackGroupRule;
 import com.eve.buy.bot.backend.domain.buybot.entity.BuybackLocation;
 import com.eve.buy.bot.backend.domain.buybot.entity.BuybackTypeRule;
 import com.eve.buy.bot.backend.domain.buybot.repository.BuybackCategoryRuleRepository;
 import com.eve.buy.bot.backend.domain.buybot.repository.BuybackConfigRepository;
+import com.eve.buy.bot.backend.domain.buybot.repository.BuybackGroupRuleRepository;
 import com.eve.buy.bot.backend.domain.buybot.repository.BuybackLocationRepository;
 import com.eve.buy.bot.backend.domain.buybot.repository.BuybackTypeRuleRepository;
 import com.eve.buy.bot.backend.domain.eve.repository.InvTypeRepository;
@@ -28,8 +30,9 @@ import java.util.stream.Collectors;
  * Die Preis-Engine des Buybots.
  *
  * <p>Der Ankaufspreis je Einheit entsteht so: Marktpreis oder Reprocessing-Wert als Basis,
- * darauf der Modifikator (Item schlaegt Kategorie schlaegt Standard), abzueglich
- * Transportgebuehr je Kubikmeter und Sicherheitsgebuehr auf den Warenwert.
+ * darauf der Modifikator. Es gibt drei Regelebenen, von fein nach grob: Einzelitem
+ * schlaegt Gruppe schlaegt Kategorie, ohne Treffer gilt der Standardwert. Abgezogen werden
+ * dann die Transportgebuehr je Kubikmeter und die Sicherheitsgebuehr auf den Warenwert.
  *
  * <p>Wird ein Item ueber die Reprocessing-Ausbeute bewertet, gilt das auch fuer den
  * Transport: berechnet wird dann mit dem Volumen der Ausbeute, nicht mit dem des
@@ -57,11 +60,24 @@ public class BuybackCalculationService {
     private final BuybackConfigRepository configRepo;
     private final BuybackLocationRepository locationRepo;
     private final BuybackTypeRuleRepository typeRuleRepo;
+    private final BuybackGroupRuleRepository groupRuleRepo;
     private final BuybackCategoryRuleRepository categoryRuleRepo;
     private final InvTypeRepository invTypeRepo;
 
-    /** Die für ein Item geltenden Regeln - einmal aufgelöst, mehrfach gebraucht. */
-    private record RuleContext(BuybackTypeRule typeRule, BuybackCategoryRule categoryRule) {}
+    /**
+     * Die für ein Item geltenden Regeln - einmal aufgelöst, mehrfach gebraucht.
+     *
+     * <p>Drei Ebenen, von fein nach grob: das Einzelitem schlägt seine Gruppe, die Gruppe
+     * schlägt ihre Kategorie. Jede Ebene darf einzelne Angaben offen lassen; dann greift
+     * die nächstgröbere.
+     *
+     * @param typeRule     Regel für dieses eine Item
+     * @param groupRule    Regel für seine Gruppe, etwa alle Eisprodukte
+     * @param categoryRule Regel für seine Kategorie
+     */
+    private record RuleContext(BuybackTypeRule typeRule,
+                               BuybackGroupRule groupRule,
+                               BuybackCategoryRule categoryRule) {}
 
     /** Ausbeute pro einzelner Einheit des Items (portionSize schon eingerechnet). */
     private record MaterialYield(long materialTypeId, double perUnit) {}
@@ -109,6 +125,7 @@ public class BuybackCalculationService {
             if (!item.isResolved()) continue;
             rules.computeIfAbsent(item.getTypeId(), id -> new RuleContext(
                     typeRuleRepo.findById(id).orElse(null),
+                    item.getGroupId() == null ? null : groupRuleRepo.findById(item.getGroupId()).orElse(null),
                     item.getCategoryId() == null ? null : categoryRuleRepo.findById(item.getCategoryId()).orElse(null)
             ));
         }
@@ -171,6 +188,7 @@ public class BuybackCalculationService {
             if (row != null) {
                 dto.setRawName(row.getTypeName());
                 dto.setVolumeEach(row.getVolume() != null ? row.getVolume() : 0.0);
+                dto.setGroupId(row.getGroupId());
                 dto.setCategoryId(row.getCategoryId());
                 dto.setResolved(true);
             } else {
@@ -187,16 +205,40 @@ public class BuybackCalculationService {
     // REPROCESSING
     // =================================================================
 
-    /** Einzelitem schlägt Kategorie, ohne Angabe wird der Marktpreis genommen. */
+    /** Einzelitem schlägt Gruppe schlägt Kategorie, ohne Angabe gilt der Marktpreis. */
     private boolean wantsReprocessedValue(RuleContext ctx) {
         if (ctx == null) return false;
         if (ctx.typeRule() != null && ctx.typeRule().getUseReprocessedValue() != null) {
             return ctx.typeRule().getUseReprocessedValue();
         }
+        if (ctx.groupRule() != null && ctx.groupRule().getUseReprocessedValue() != null) {
+            return ctx.groupRule().getUseReprocessedValue();
+        }
         if (ctx.categoryRule() != null && ctx.categoryRule().getUseReprocessedValue() != null) {
             return ctx.categoryRule().getUseReprocessedValue();
         }
         return false;
+    }
+
+    /**
+     * Die anzusetzende Reprocessing-Ausbeute für ein Item.
+     *
+     * <p>Im Spiel haengt die Ausbeute davon ab, was verwertet wird - Erz, Eis und Schrott
+     * brauchen verschiedene Skills. Deshalb darf die Gruppe eine eigene Rate setzen; ohne
+     * eigene Angabe gilt die globale aus der Konfiguration.
+     *
+     * @param ctx    die geltenden Regeln
+     * @param config die Konfiguration mit der globalen Ausbeute
+     * @return die Ausbeute in Prozent
+     */
+    private double reprocessingRateFor(RuleContext ctx, BuybackConfig config) {
+        if (ctx != null && ctx.groupRule() != null) {
+            Double groupRate = ctx.groupRule().getReprocessingRate();
+            if (groupRate != null && groupRate > 0) {
+                return Math.min(groupRate, 100.0);
+            }
+        }
+        return config.reprocessingRateOrDefault();
     }
 
     /**
@@ -262,24 +304,35 @@ public class BuybackCalculationService {
 
         RuleContext ctx = context.rules().get(item.getTypeId());
         BuybackTypeRule typeRule = ctx != null ? ctx.typeRule() : null;
+        BuybackGroupRule groupRule = ctx != null ? ctx.groupRule() : null;
         BuybackCategoryRule categoryRule = ctx != null ? ctx.categoryRule() : null;
 
-        // Blacklist-Check: schlägt die Kategorie-Whitelist bewusst aus
+        // Sperre auf Itemebene: schlägt jede Freigabe darüber bewusst aus
         if (typeRule != null && Boolean.TRUE.equals(typeRule.getIsBlacklisted())) {
             reject(item, STATUS_BLOCKED, "GESPERRT (ITEM)");
             return;
         }
 
-        // Whitelist-Check (Muss auf Item- oder Kategorie-Ebene erlaubt sein)
-        if (typeRule == null && categoryRule == null) {
+        // Sperre auf Gruppenebene. Eine eigene Item-Regel hebt sie wieder auf - so lässt
+        // sich eine ganze Gruppe sperren und ein einzelnes Item daraus doch ankaufen.
+        if (typeRule == null && groupRule != null && Boolean.TRUE.equals(groupRule.getIsBlacklisted())) {
+            reject(item, STATUS_BLOCKED, "GESPERRT (GRUPPE)");
+            return;
+        }
+
+        // Whitelist: eine der drei Ebenen muss das Item freigeben
+        if (typeRule == null && groupRule == null && categoryRule == null) {
             reject(item, STATUS_NOT_LISTED, "NICHT GELISTET");
             return;
         }
 
-        // Modifikator bestimmen (Strenge Hierarchie: Item > Kategorie > Global)
+        // Modifikator bestimmen (strenge Hierarchie: Item > Gruppe > Kategorie > Global)
         double modPercent = context.config().getGlobalModifier();
         if (categoryRule != null && categoryRule.getModifier() != null) {
             modPercent = categoryRule.getModifier();
+        }
+        if (groupRule != null && groupRule.getModifier() != null) {
+            modPercent = groupRule.getModifier();
         }
         if (typeRule != null && typeRule.getModifier() != null) {
             modPercent = typeRule.getModifier();
@@ -293,7 +346,7 @@ public class BuybackCalculationService {
         // Basis: entweder der Marktpreis des Items oder der Wert seiner Reprocessing-Ausbeute.
         // Ist ein Item nicht verwertbar, fällt es automatisch auf den Marktpreis zurück.
         List<MaterialYield> mats = context.yields().get(item.getTypeId());
-        double rate = context.config().reprocessingRateOrDefault();
+        double rate = reprocessingRateFor(ctx, context.config());
         double basisPrice;
         double grossValue;
         double transportVolume;

@@ -149,6 +149,7 @@ public class EvePasteParserService {
                 dto.setTypeId(details.getTypeId());
                 dto.setRawName(details.getTypeName()); // Exakter Name aus der DB
                 dto.setVolumeEach(details.getVolume() != null ? details.getVolume() : 0.0);
+                dto.setGroupId(details.getGroupId());
                 dto.setCategoryId(details.getCategoryId());
                 dto.setResolved(true);
             }

@@ -56,7 +56,7 @@
       </div>
       <p class="hint">
         Die Ausbeute gilt für alle Regeln mit Häkchen bei "Reprocessed". Die SDE kennt nur die perfekte
-        Ausbeute (100 %) - eine NPC-Station schafft 50 %, mit Skills und Anlage entsprechend mehr.
+        Ausbeute (100 %) eine NPC-Station schafft 50 %, mit Skills und Anlage entsprechend mehr.
       </p>
     </fieldset>
 
@@ -67,9 +67,9 @@
         <thead>
         <tr>
           <th>Name</th>
-          <th style="width: 140px;">Transport (ISK/m3)</th>
+          <th style="width: 160px;">Transport (ISK/m3)</th>
           <th style="width: 110px;">Sicherheit (%)</th>
-          <th style="width: 120px;">Station ID</th>
+          <th style="width: 180px;">Station ID</th>
           <th style="width: 90px; text-align: center;">Aktion</th>
         </tr>
         </thead>
@@ -92,7 +92,7 @@
           <td style="padding: 6px;"><input type="number" placeholder="0" [(ngModel)]="newLoc.securityFee" style="padding: 4px; width: 100%;"></td>
           <td style="padding: 6px;">
             <div style="display: flex; gap: 6px;">
-              <input type="number" placeholder="ID (optional)" [(ngModel)]="newLoc.stationId" style="padding: 4px; width: 100%;">
+              <input type="number" placeholder="ID" [(ngModel)]="newLoc.stationId" style="padding: 4px; width: 100%;">
               <button class="small" (click)="searchStationId()" title="ID über ESI suchen" [disabled]="!newLoc.name || isSearching">
                 @if (isSearching) {
                   <i class="fa-solid fa-spinner fa-spin"></i>
@@ -135,6 +135,86 @@
       <p class="hint">
         Mit Häkchen wird der Wert der Reprocessing-Ausbeute angesetzt statt des Marktpreises des Items.
         Ist ein Item nicht verwertbar, greift automatisch wieder der Marktpreis.
+      </p>
+    </fieldset>
+
+    <!-- 3b. GRUPPEN-REGELN -->
+    <fieldset>
+      <legend>Gruppen-Regeln</legend>
+      <table class="admin-table">
+        <thead>
+        <tr>
+          <th>Gruppe</th>
+          <th style="width: 160px;">Kategorie</th>
+          <th style="width: 160px;">Modifikator / Status</th>
+          <th style="width: 110px; text-align: center;">Reprocessed</th>
+          <th style="width: 130px; text-align: center;">Reprocessing-Ausbeute</th>
+          <th style="width: 90px; text-align: center;">Aktion</th>
+        </tr>
+        </thead>
+        <tbody>
+          @for (group of groups; track group.groupId) {
+            <tr>
+              <td>{{ group.groupName }}</td>
+              <td style="color: var(--green-dim);">{{ group.categoryName || '-' }}</td>
+              <td [class.status-err]="group.isBlacklisted" [class.status-ok]="!group.isBlacklisted">
+                {{ group.isBlacklisted ? 'GESPERRT' : group.modifier + '%' }}
+              </td>
+              <td style="text-align: center;" [class]="groupReprocessClass(group)"
+                  [title]="group.reprocessable === false ? 'Kein Item dieser Gruppe hat eine Reprocessing-Ausbeute - es gilt der Marktpreis' : ''">
+                {{ groupReprocessLabel(group) }}
+              </td>
+              <td style="text-align: center;">{{ rateLabel(group) }}</td>
+              <td style="text-align: center;"><button class="danger small" (click)="deleteGroup(group.groupId!)">LÖSCHEN</button></td>
+            </tr>
+          }
+        </tbody>
+        <tfoot style="background: rgba(51, 255, 51, 0.05);">
+        <tr>
+          <td style="padding: 6px;"><input type="text" placeholder="Exakter Gruppenname" [(ngModel)]="newGroup.name" style="padding: 4px;"></td>
+          <td style="padding: 6px;">
+            <input type="text" placeholder="bei doppelten Namen" [(ngModel)]="newGroup.category"
+                   title="Vier Gruppennamen gibt es in EVE mehrfach. Nur dann wird die Kategorie gebraucht."
+                   style="padding: 4px; width: 100%;">
+          </td>
+          <td style="padding: 6px;">
+            <div style="display: flex; gap: 8px; align-items: center;">
+              <input type="number" placeholder="90" [(ngModel)]="newGroup.modifier" [disabled]="newGroup.isBlacklisted" style="width: 60px; padding: 4px;">
+              <input type="checkbox" id="groupBlacklistCheck" [(ngModel)]="newGroup.isBlacklisted" style="width: auto; margin: 0;">
+              <label for="groupBlacklistCheck" style="margin: 0; color: var(--red); cursor: pointer;">Sperren</label>
+            </div>
+          </td>
+          <td style="padding: 6px; text-align: center;">
+            <input type="checkbox" [(ngModel)]="newGroup.useReprocessedValue" [disabled]="newGroup.isBlacklisted"
+                   title="Statt des Marktpreises den Wert der Reprocessing-Ausbeute ansetzen" style="width: auto; margin: 0;">
+          </td>
+          <td style="padding: 6px; text-align: center;">
+            <input type="number" min="0" max="100" placeholder="global" [(ngModel)]="newGroup.reprocessingRate"
+                   [disabled]="newGroup.isBlacklisted || !newGroup.useReprocessedValue"
+                   title="Eigene Ausbeute dieser Gruppe in Prozent. Leer lassen = globale Ausbeute aus der Konfiguration."
+                   style="width: 80px; padding: 4px;">
+          </td>
+          <td style="padding: 6px; text-align: center;"><button class="small" (click)="addGroup()">SPEICHERN</button></td>
+        </tr>
+        </tfoot>
+      </table>
+      <p class="hint">
+        Die Gruppe liegt zwischen Kategorie und Einzelitem: In "Material" stecken Mineralien, Gase und
+        Eisprodukte gemeinsam. Über die Gruppe lässt sich jedes dieser Bündel eigenständig freigeben,
+        sperren oder mit eigenem Preis versehen, ohne jedes Item einzeln anzufassen.
+      </p>
+      <p class="hint">
+        Reihenfolge: <strong>Einzelitem schlägt Gruppe schlägt Kategorie.</strong> Eine gesperrte Gruppe
+        lässt sich also durch eine eigene Item-Regel wieder öffnen.
+      </p>
+      <p class="hint">
+        Die Ausbeute ist im Spiel je Gruppe verschieden (Erz, Eis und Schrott brauchen unterschiedliche
+        Skills). Bleibt das Feld leer, gilt die globale Ausbeute aus der Konfiguration.
+      </p>
+      <p class="hint">
+        Steht in der Spalte Reprocessed <span class="status-warn">JA (wirkungslos)</span>, hat kein Item
+        dieser Gruppe eine Ausbeute - Mineralien und Mondgüter sind selbst schon Endprodukte. Dann gilt
+        weiter der Marktpreis.
       </p>
     </fieldset>
 
@@ -184,9 +264,9 @@
         </tfoot>
       </table>
       <p class="hint">
-        Einzelitems überlagern die Kategorie: erlaubte Kategorie + gesperrtes Item = gesperrt,
-        erlaubte Kategorie + eigener Modifikator = eigener Modifikator. Das gilt auch für "Reprocessed" -
-        die Einstellung am Item schlägt die der Kategorie.
+        Einzelitems überlagern Gruppe und Kategorie: erlaubt + gesperrtes Item = gesperrt,
+        erlaubt + eigener Modifikator = eigener Modifikator. Das gilt auch für "Reprocessed" -
+        die Einstellung am Item schlägt die der Gruppe und die der Kategorie.
       </p>
       <p class="hint">
         Steht in der Spalte Reprocessed <span class="status-warn">JA (wirkungslos)</span>, hat das Item gar

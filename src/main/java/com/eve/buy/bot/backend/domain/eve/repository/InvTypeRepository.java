@@ -27,6 +27,7 @@ public interface InvTypeRepository extends JpaRepository<InvType, Long> {
             t."typeID" as typeId, 
             t."typeName" as typeName, 
             t.volume as volume, 
+            g."groupID" as groupId,
             g."categoryID" as categoryId
         FROM evesde."invTypes" t
         JOIN evesde."invGroups" g ON t."groupID" = g."groupID"
@@ -43,6 +44,7 @@ public interface InvTypeRepository extends JpaRepository<InvType, Long> {
             t."typeID" as typeId,
             t."typeName" as typeName,
             t.volume as volume,
+            g."groupID" as groupId,
             g."categoryID" as categoryId
         FROM evesde."invTypes" t
         JOIN evesde."invGroups" g ON t."groupID" = g."groupID"

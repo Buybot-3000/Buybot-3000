@@ -181,6 +181,7 @@ stellst du im nächsten Schritt ein.
    | Preisbasis | Jita Buy oder Sell, dazu dein Standard-Prozentsatz |
    | Abgabeorte | Ort anlegen, Gebühren eintragen, **Lupe drücken** für die Station-ID |
    | Kategorien-Whitelist | was du überhaupt ankaufst, zum Beispiel `Asteroid` |
+   | Gruppen-Regeln | feiner als die Kategorie, zum Beispiel nur `Mineral` statt aller Materialien |
    | Einzelitem-Regeln | Ausnahmen und Sperren |
    | Vertragserstellung | auf welchen Charakter die Verträge laufen sollen |
    | Vertragsprüfung | Prüf-Charakter wählen, Toleranz auf **1** setzen |

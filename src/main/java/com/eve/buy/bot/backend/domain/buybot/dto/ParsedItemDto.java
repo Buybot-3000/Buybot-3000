@@ -16,6 +16,7 @@ public class ParsedItemDto {
     // Werden aus der DB befüllt
     private Long typeId;
     private Double volumeEach;
+    private Long groupId;
     private Long categoryId;
 
     private boolean isResolved = false;

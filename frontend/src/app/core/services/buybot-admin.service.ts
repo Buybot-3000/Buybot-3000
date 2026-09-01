@@ -65,6 +65,27 @@ export interface AdminCategory {
   useReprocessedValue: boolean;
 }
 
+export interface AdminGroup {
+  groupId?: number;
+  groupName?: string;
+  /** Kategorie, in der die Gruppe liegt - nur zur Einordnung in der Tabelle. */
+  categoryName?: string | null;
+  modifier: number;
+  isBlacklisted: boolean;
+  /** Überschreibt die Kategorie-Einstellung, wird vom Einzelitem überschrieben. */
+  useReprocessedValue: boolean;
+  /**
+   * Eigene Reprocessing-Ausbeute in Prozent. null = die globale Ausbeute aus der
+   * Konfiguration. Erz, Eis und Schrott beuten im Spiel verschieden aus.
+   */
+  reprocessingRate: number | null;
+  /**
+   * false = kein Item dieser Gruppe hat eine Ausbeute, das Häkchen bleibt also wirkungslos.
+   * Mineralien und Mondgüter sind Endprodukte.
+   */
+  reprocessable?: boolean;
+}
+
 export interface AdminType {
   typeId?: number;
   typeName?: string;
@@ -200,6 +221,18 @@ export class BuybotAdminService {
 
   searchStationId(name: string): Observable<number> {
     return this.http.get<number>(`${this.baseUrl}/search-station?name=${encodeURIComponent(name)}`);
+  }
+
+  // --- GROUPS (Gruppenebene zwischen Kategorie und Item) ---
+  getGroups(): Observable<AdminGroup[]> {
+    return this.http.get<AdminGroup[]>(`${this.baseUrl}/groups`);
+  }
+  addGroup(group: { groupName: string; categoryName: string | null; modifier: number; isBlacklisted: boolean;
+                    useReprocessedValue: boolean; reprocessingRate: number | null }): Observable<AdminGroup> {
+    return this.http.post<AdminGroup>(`${this.baseUrl}/groups`, group);
+  }
+  deleteGroup(groupId: number): Observable<void> {
+    return this.http.delete<void>(`${this.baseUrl}/groups/${groupId}`);
   }
 
   // --- TYPES (ITEMS) ---

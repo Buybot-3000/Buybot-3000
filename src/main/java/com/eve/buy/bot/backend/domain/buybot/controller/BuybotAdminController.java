@@ -8,18 +8,22 @@ import com.eve.buy.bot.backend.domain.buybot.dto.ReprocessMaterialProjection;
 import com.eve.buy.bot.backend.domain.buybot.dto.TypeDetailsProjection;
 import com.eve.buy.bot.backend.domain.buybot.entity.BuybackCategoryRule;
 import com.eve.buy.bot.backend.domain.buybot.entity.BuybackConfig;
+import com.eve.buy.bot.backend.domain.buybot.entity.BuybackGroupRule;
 import com.eve.buy.bot.backend.domain.buybot.entity.BuybackLocation;
 import com.eve.buy.bot.backend.domain.buybot.entity.BuybackTypeRule;
 import com.eve.buy.bot.backend.domain.buybot.entity.ContractCheck;
 import com.eve.buy.bot.backend.domain.buybot.repository.BuybackCategoryRuleRepository;
 import com.eve.buy.bot.backend.domain.buybot.repository.BuybackConfigRepository;
+import com.eve.buy.bot.backend.domain.buybot.repository.BuybackGroupRuleRepository;
 import com.eve.buy.bot.backend.domain.buybot.repository.BuybackLocationRepository;
 import com.eve.buy.bot.backend.domain.buybot.repository.BuybackTypeRuleRepository;
 import com.eve.buy.bot.backend.domain.buybot.service.ContractCheckService;
 import com.eve.buy.bot.backend.domain.character.repository.CharacterRepository;
 import com.eve.buy.bot.backend.domain.eve.entity.InvCategory;
+import com.eve.buy.bot.backend.domain.eve.entity.InvGroup;
 import com.eve.buy.bot.backend.domain.eve.entity.InvType;
 import com.eve.buy.bot.backend.domain.eve.repository.InvCategoryRepository;
+import com.eve.buy.bot.backend.domain.eve.repository.InvGroupRepository;
 import com.eve.buy.bot.backend.domain.eve.repository.InvTypeRepository;
 import com.eve.buy.bot.backend.esi.EsiService;
 import lombok.RequiredArgsConstructor;
@@ -63,6 +67,8 @@ public class BuybotAdminController {
     private final BuybackTypeRuleRepository typeRuleRepo;
     private final InvTypeRepository invTypeRepo;
     private final InvCategoryRepository invCategoryRepo;
+    private final InvGroupRepository invGroupRepo;
+    private final BuybackGroupRuleRepository groupRuleRepo;
     private final AuthService  authService;
     private final CharacterRepository characterRepo;
     private final EsiService esiService;
@@ -333,6 +339,157 @@ public class BuybotAdminController {
     }
 
     // ==========================================
+    // 3b. GROUP RULES (Gruppen-Whitelist/Blacklist)
+    // ==========================================
+
+    /**
+     * Eine Gruppen-Regel für die Anzeige.
+     *
+     * @param groupId             Group-ID aus der Statikdatenbank
+     * @param groupName           Anzeigename der Gruppe
+     * @param categoryName        Kategorie, in der die Gruppe liegt - zur Einordnung
+     * @param modifier            Preis-Modifikator in Prozent
+     * @param isBlacklisted       {@code true}, wenn die ganze Gruppe gesperrt ist
+     * @param useReprocessedValue {@code true}, wenn über die Ausbeute bewertet werden soll
+     * @param reprocessingRate    eigene Ausbeute in Prozent, {@code null} = globale Ausbeute
+     * @param reprocessable       {@code false}, wenn kein Item der Gruppe eine Ausbeute hat und
+     *                            das Häkchen deshalb wirkungslos bleibt
+     */
+    public record GroupRuleDto(Long groupId, String groupName, String categoryName, Double modifier,
+                               Boolean isBlacklisted, Boolean useReprocessedValue, Double reprocessingRate,
+                               boolean reprocessable) {}
+
+    /**
+     * Anfrage zum Anlegen einer Gruppen-Regel.
+     *
+     * @param groupName           Name der Gruppe, etwa "Ice Product"
+     * @param categoryName        Kategorie zur Unterscheidung, nur nötig bei doppelt
+     *                            vergebenen Gruppennamen
+     * @param modifier            Preis-Modifikator in Prozent
+     * @param isBlacklisted       {@code true}, wenn die Gruppe gesperrt werden soll
+     * @param useReprocessedValue {@code true}, wenn über die Ausbeute bewertet werden soll
+     * @param reprocessingRate    eigene Ausbeute in Prozent, {@code null} = globale Ausbeute
+     */
+    public record AddGroupRuleRequest(String groupName, String categoryName, Double modifier,
+                                      Boolean isBlacklisted, Boolean useReprocessedValue,
+                                      Double reprocessingRate) {}
+
+    /**
+     * Liefert die Gruppen-Regeln samt Gruppen- und Kategorienamen.
+     *
+     * @return die Gruppen-Regeln
+     */
+    @GetMapping("/groups")
+    public ResponseEntity<List<GroupRuleDto>> getGroupRules() {
+        List<BuybackGroupRule> rules = groupRuleRepo.findAll();
+        Set<Long> reprocessable = reprocessableGroupsAmong(
+                rules.stream().map(BuybackGroupRule::getGroupId).collect(Collectors.toSet()));
+
+        List<GroupRuleDto> result = rules.stream().map(rule -> {
+            InvGroup group = invGroupRepo.findById(rule.getGroupId()).orElse(null);
+            String groupName = group != null ? group.getGroupName() : "Unknown Group";
+            String categoryName = group == null ? null : categoryNameOf(group);
+            return new GroupRuleDto(rule.getGroupId(), groupName, categoryName, rule.getModifier(),
+                    rule.getIsBlacklisted(), Boolean.TRUE.equals(rule.getUseReprocessedValue()),
+                    rule.getReprocessingRate(), reprocessable.contains(rule.getGroupId()));
+        }).toList();
+        return ResponseEntity.ok(result);
+    }
+
+    /**
+     * Legt eine Regel fuer eine ganze Gruppe an.
+     *
+     * @param request Gruppenname, Modifikator, Sperre, Reprocessing-Schalter und Ausbeute
+     * @return die gespeicherte Regel
+     */
+    @PostMapping("/groups")
+    public ResponseEntity<BuybackGroupRule> addGroupRule(@RequestBody AddGroupRuleRequest request) {
+        InvGroup group = resolveGroup(request.groupName(), request.categoryName());
+
+        BuybackGroupRule rule = new BuybackGroupRule();
+        rule.setGroupId(group.getGroupId());
+        rule.setModifier(request.modifier());
+        rule.setIsBlacklisted(Boolean.TRUE.equals(request.isBlacklisted()));
+        rule.setUseReprocessedValue(Boolean.TRUE.equals(request.useReprocessedValue()));
+        rule.setReprocessingRate(request.reprocessingRate());
+        auditAdmin("Gruppen-Regel gespeichert: %s -> %s".formatted(group.getGroupName(),
+                Boolean.TRUE.equals(request.isBlacklisted()) ? "gesperrt" : request.modifier() + " %"));
+
+        return ResponseEntity.ok(groupRuleRepo.save(rule));
+    }
+
+    /**
+     * Sucht die gemeinte Gruppe zum eingegebenen Namen.
+     *
+     * <p>Vier Gruppennamen sind in EVE doppelt vergeben. Statt eines Serverfehlers bekommt
+     * der Admin dann die Kategorien genannt, unter denen es den Namen gibt, und kann die
+     * gemeinte mitgeben.
+     *
+     * @param groupName    der eingegebene Gruppenname
+     * @param categoryName die Kategorie zur Unterscheidung, darf {@code null} sein
+     * @return die eindeutig bestimmte Gruppe
+     */
+    private InvGroup resolveGroup(String groupName, String categoryName) {
+        String gesucht = groupName == null ? "" : groupName.trim();
+        List<InvGroup> treffer = invGroupRepo.findByGroupNameIgnoreCase(gesucht);
+
+        if (treffer.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Gruppe nicht in der EVE DB gefunden.");
+        }
+        if (treffer.size() == 1) {
+            return treffer.getFirst();
+        }
+
+        // Mehrdeutig: die mitgegebene Kategorie entscheidet
+        if (categoryName != null && !categoryName.isBlank()) {
+            String kategorie = categoryName.trim();
+            List<InvGroup> gefiltert = treffer.stream()
+                    .filter(g -> kategorie.equalsIgnoreCase(categoryNameOf(g)))
+                    .toList();
+            if (gefiltert.size() == 1) {
+                return gefiltert.getFirst();
+            }
+        }
+
+        String kategorien = treffer.stream()
+                .map(this::categoryNameOf)
+                .filter(Objects::nonNull)
+                .sorted()
+                .collect(Collectors.joining(", "));
+        throw new ResponseStatusException(HttpStatus.CONFLICT,
+                "Den Gruppennamen \"" + gesucht + "\" gibt es in mehreren Kategorien (" + kategorien
+                        + "). Bitte die gemeinte Kategorie mit angeben.");
+    }
+
+    /**
+     * Liefert den Kategorienamen einer Gruppe.
+     *
+     * @param group die Gruppe
+     * @return der Kategoriename, {@code null} wenn die Kategorie fehlt
+     */
+    private String categoryNameOf(InvGroup group) {
+        if (group.getCategoryId() == null) {
+            return null;
+        }
+        return invCategoryRepo.findById(group.getCategoryId())
+                .map(InvCategory::getCategoryName)
+                .orElse(null);
+    }
+
+    /**
+     * Loescht eine Gruppen-Regel.
+     *
+     * @param groupId Group-ID der Gruppe
+     * @return eine leere Antwort
+     */
+    @DeleteMapping("/groups/{groupId}")
+    public ResponseEntity<Void> deleteGroupRule(@PathVariable Long groupId) {
+        auditAdmin("Gruppen-Regel gelöscht: Gruppe " + groupId);
+        groupRuleRepo.deleteById(groupId);
+        return ResponseEntity.ok().build();
+    }
+
+    // ==========================================
     // 4. TYPE RULES (Einzelitem Whitelist/Blacklist)
     // ==========================================
 
@@ -384,6 +541,19 @@ public class BuybotAdminController {
         auditAdmin("Item-Regel gelöscht: Type " + typeId);
         typeRuleRepo.deleteById(typeId);
         return ResponseEntity.ok().build();
+    }
+
+    /**
+     * Ermittelt, welche der angegebenen Gruppen mindestens ein verwertbares Item enthalten.
+     *
+     * @param groupIds die zu prüfenden Gruppen
+     * @return die Teilmenge mit Ausbeute
+     */
+    private Set<Long> reprocessableGroupsAmong(Set<Long> groupIds) {
+        if (groupIds.isEmpty()) {
+            return Set.of();
+        }
+        return Set.copyOf(invGroupRepo.findGroupIdsWithReprocessableItems(groupIds));
     }
 
     /**

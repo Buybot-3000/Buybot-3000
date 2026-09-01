@@ -23,6 +23,7 @@ describe('BuybotAdminComponent', () => {
     httpMock.expectOne(`${adminUrl}/config`).flush(config);
     httpMock.expectOne(`${adminUrl}/locations`).flush([]);
     httpMock.expectOne(`${adminUrl}/categories`).flush([]);
+    httpMock.expectOne(`${adminUrl}/groups`).flush([]);
     httpMock.expectOne(`${adminUrl}/types`).flush([]);
     httpMock.expectOne(`${adminUrl}/characters`).flush([]);
     httpMock.expectOne(`${adminUrl}/contract-check/results?limit=25`).flush([]);
@@ -149,5 +150,102 @@ describe('BuybotAdminComponent', () => {
     expect(component.severityClass('INFO')).toBe('status-ok');
     expect(component.severityClass('WARN')).toBe('status-warn');
     expect(component.severityClass('ERROR')).toBe('status-err');
+  });
+
+  it('zeigt bei einer Gruppe ohne eigene Ausbeute die globale an', () => {
+    // Eine leere Zelle laese sich als "keine Ausbeute" missverstehen - hier steht,
+    // welcher Wert tatsaechlich gerechnet wird.
+    answerStartupRequests({ priceBasis: 'buy', globalModifier: 90, reprocessingRate: 52 });
+
+    const label = component.rateLabel({
+      groupId: 18, groupName: 'Mineral', modifier: 90,
+      isBlacklisted: false, useReprocessedValue: true, reprocessingRate: null
+    });
+
+    expect(label).toBe('global (52%)');
+  });
+
+  it('zeigt die eigene Ausbeute einer Gruppe, wenn eine gesetzt ist', () => {
+    answerStartupRequests({ priceBasis: 'buy', globalModifier: 90, reprocessingRate: 52 });
+
+    const label = component.rateLabel({
+      groupId: 423, groupName: 'Ice Product', modifier: 90,
+      isBlacklisted: false, useReprocessedValue: true, reprocessingRate: 62
+    });
+
+    expect(label).toBe('62%');
+  });
+
+  it('zeigt keine Ausbeute an, solange die Gruppe nach Marktpreis bewertet wird', () => {
+    answerStartupRequests({ priceBasis: 'buy', globalModifier: 90, reprocessingRate: 52 });
+
+    const label = component.rateLabel({
+      groupId: 18, groupName: 'Mineral', modifier: 90,
+      isBlacklisted: false, useReprocessedValue: false, reprocessingRate: 62
+    });
+
+    expect(label).toBe('-');
+  });
+
+  it('speichert eine Gruppen-Regel und laedt die Liste neu', () => {
+    answerStartupRequests({ priceBasis: 'buy', globalModifier: 90, reprocessingRate: 50 });
+    component.newGroup = { name: '  Ice Product  ', category: '', modifier: 80, isBlacklisted: false,
+                           useReprocessedValue: true, reprocessingRate: 62 };
+
+    component.addGroup();
+
+    const angelegt = httpMock.expectOne(`${adminUrl}/groups`);
+    expect(angelegt.request.method).toBe('POST');
+    // Leerzeichen aus dem Eingabefeld duerfen nicht mitgeschickt werden
+    expect(angelegt.request.body.groupName).toBe('Ice Product');
+    expect(angelegt.request.body.reprocessingRate).toBe(62);
+    angelegt.flush({ groupId: 423 });
+
+    httpMock.expectOne(`${adminUrl}/groups`).flush([
+      { groupId: 423, groupName: 'Ice Product', categoryName: 'Material', modifier: 80,
+        isBlacklisted: false, useReprocessedValue: true, reprocessingRate: 62 }
+    ]);
+
+    expect(component.groups.length).toBe(1);
+    // Das Formular muss geleert sein, sonst legt der naechste Klick dieselbe Regel erneut an
+    expect(component.newGroup.name).toBe('');
+    expect(component.newGroup.reprocessingRate).toBeNull();
+  });
+
+  it('legt ohne Gruppennamen nichts an', () => {
+    answerStartupRequests({ priceBasis: 'buy', globalModifier: 90, reprocessingRate: 50 });
+    component.newGroup.name = '';
+
+    component.addGroup();
+
+    httpMock.expectNone(`${adminUrl}/groups`);
+  });
+
+  it('warnt, wenn das Reprocessing-Häkchen einer Gruppe wirkungslos bleibt', () => {
+    // Mineralien sind selbst schon Endprodukte - ohne Hinweis sucht man den Fehler beim Preis
+    answerStartupRequests({ priceBasis: 'buy', globalModifier: 90, reprocessingRate: 50 });
+
+    const label = component.groupReprocessLabel({
+      groupId: 18, groupName: 'Mineral', modifier: 90,
+      isBlacklisted: false, useReprocessedValue: true, reprocessingRate: null, reprocessable: false
+    });
+
+    expect(label).toBe('JA (wirkungslos)');
+    expect(component.groupReprocessClass({
+      groupId: 18, groupName: 'Mineral', modifier: 90,
+      isBlacklisted: false, useReprocessedValue: true, reprocessingRate: null, reprocessable: false
+    })).toBe('status-warn');
+  });
+
+  it('zeigt eine verwertbare Gruppe ohne Warnung', () => {
+    answerStartupRequests({ priceBasis: 'buy', globalModifier: 90, reprocessingRate: 50 });
+
+    const gruppe = {
+      groupId: 423, groupName: 'Ice Product', modifier: 90,
+      isBlacklisted: false, useReprocessedValue: true, reprocessingRate: null, reprocessable: true
+    };
+
+    expect(component.groupReprocessLabel(gruppe)).toBe('JA');
+    expect(component.groupReprocessClass(gruppe)).toBe('status-ok');
   });
 });

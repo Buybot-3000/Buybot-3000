@@ -15,8 +15,11 @@ Preismatrix und meldet sich, wenn etwas nicht passt.
 
 **Für den Betreiber** — Admin-Panel, Zugang über EVE-Corp-Titel
 - Preisbasis (Jita Buy oder Sell) und Standard-Modifikator.
-- Whitelist nach Kategorie, Regeln für einzelne Items, Sperrliste.
-  Einzelitem schlägt Kategorie, Sperre schlägt alles.
+- Whitelist auf drei Ebenen: Kategorie, Gruppe und einzelnes Item, jeweils mit eigenem
+  Preis, eigener Reprocessing-Einstellung und eigener Sperre.
+  Einzelitem schlägt Gruppe schlägt Kategorie, Sperre schlägt alles.
+- Die Reprocessing-Ausbeute lässt sich je Gruppe setzen, weil Erz, Eis und Schrott
+  im Spiel verschieden ausbeuten.
 - Wahlweise Bewertung über den Reprocessing-Wert der Ausbeute statt über den Marktpreis.
 - Abgabeorte mit Gebühr je m³ und Sicherheitsgebühr in Prozent.
 - Automatische Vertragsprüfung über ESI: falscher Ort, Preisabweichung über Toleranz,

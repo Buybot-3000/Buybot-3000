@@ -6,10 +6,12 @@ import com.eve.buy.bot.backend.domain.buybot.dto.ReprocessMaterialProjection;
 import com.eve.buy.bot.backend.domain.buybot.dto.TypeDetailsProjection;
 import com.eve.buy.bot.backend.domain.buybot.entity.BuybackCategoryRule;
 import com.eve.buy.bot.backend.domain.buybot.entity.BuybackConfig;
+import com.eve.buy.bot.backend.domain.buybot.entity.BuybackGroupRule;
 import com.eve.buy.bot.backend.domain.buybot.entity.BuybackLocation;
 import com.eve.buy.bot.backend.domain.buybot.entity.BuybackTypeRule;
 import com.eve.buy.bot.backend.domain.buybot.repository.BuybackCategoryRuleRepository;
 import com.eve.buy.bot.backend.domain.buybot.repository.BuybackConfigRepository;
+import com.eve.buy.bot.backend.domain.buybot.repository.BuybackGroupRuleRepository;
 import com.eve.buy.bot.backend.domain.buybot.repository.BuybackLocationRepository;
 import com.eve.buy.bot.backend.domain.buybot.repository.BuybackTypeRuleRepository;
 import com.eve.buy.bot.backend.domain.eve.repository.InvTypeRepository;
@@ -48,11 +50,14 @@ class BuybackCalculationServiceTest {
 
     private static final long TRITANIUM = 34L;
     private static final long MINERAL_CATEGORY = 4L;
+    /** Gruppe "Mineral" - liegt mit Gasen und Eisprodukten in derselben Kategorie. */
+    private static final long MINERAL_GROUP = 18L;
 
     @Mock private MarketService marketService;
     @Mock private BuybackConfigRepository configRepo;
     @Mock private BuybackLocationRepository locationRepo;
     @Mock private BuybackTypeRuleRepository typeRuleRepo;
+    @Mock private BuybackGroupRuleRepository groupRuleRepo;
     @Mock private BuybackCategoryRuleRepository categoryRuleRepo;
     @Mock private InvTypeRepository invTypeRepo;
 
@@ -63,7 +68,7 @@ class BuybackCalculationServiceTest {
     @BeforeEach
     void setUp() {
         service = new BuybackCalculationService(marketService, configRepo, locationRepo,
-                typeRuleRepo, categoryRuleRepo, invTypeRepo);
+                typeRuleRepo, groupRuleRepo, categoryRuleRepo, invTypeRepo);
 
         config = new BuybackConfig();
         config.setPriceBasis("buy");
@@ -79,6 +84,7 @@ class BuybackCalculationServiceTest {
         lenient().when(configRepo.findById(1L)).thenReturn(Optional.of(config));
         lenient().when(locationRepo.findById(1L)).thenReturn(Optional.of(location));
         lenient().when(typeRuleRepo.findById(anyLong())).thenReturn(Optional.empty());
+        lenient().when(groupRuleRepo.findById(anyLong())).thenReturn(Optional.empty());
         lenient().when(categoryRuleRepo.findById(anyLong())).thenReturn(Optional.empty());
         lenient().when(marketService.getJitaPrices(any())).thenReturn(Map.of(TRITANIUM, price(4.0, 5.0)));
     }
@@ -149,6 +155,88 @@ class BuybackCalculationServiceTest {
 
             assertThat(item.getStatusCode()).isEqualTo(BuybackCalculationService.STATUS_UNKNOWN);
             assertThat(item.getTotalPrice()).isZero();
+        }
+    }
+
+    @Nested
+    @DisplayName("Gruppenebene")
+    class GroupLevel {
+
+        @Test
+        @DisplayName("kauft an, was ueber die Gruppe freigegeben ist")
+        void acceptsItemsAllowedByGroup() {
+            allowGroup(MINERAL_GROUP, 90.0);
+            ParsedItemDto item = tritanium(100);
+
+            service.calculatePrices(List.of(item), 1L);
+
+            assertThat(item.getStatusCode()).isEqualTo(BuybackCalculationService.STATUS_OK);
+            assertThat(item.getTotalPrice()).isEqualTo(360.0); // 4,00 Jita-Buy * 90 % * 100
+        }
+
+        @Test
+        @DisplayName("sperrt eine ganze Gruppe trotz erlaubter Kategorie")
+        void blockedGroupBeatsAllowedCategory() {
+            // Genau der Fall aus der Praxis: Kategorie "Material" ist frei, aber Eisprodukte
+            // und Gase sollen nicht angekauft werden.
+            allowCategory(MINERAL_CATEGORY, 90.0);
+            blockGroup(MINERAL_GROUP);
+
+            ParsedItemDto item = tritanium(100);
+            service.calculatePrices(List.of(item), 1L);
+
+            assertThat(item.getStatusCode()).isEqualTo(BuybackCalculationService.STATUS_BLOCKED);
+            assertThat(item.getTotalPrice()).isZero();
+        }
+
+        @Test
+        @DisplayName("oeffnet ein Einzelitem wieder, dessen Gruppe gesperrt ist")
+        void itemRuleReopensBlockedGroup() {
+            blockGroup(MINERAL_GROUP);
+            allowType(TRITANIUM, 80.0);
+
+            ParsedItemDto item = tritanium(100);
+            service.calculatePrices(List.of(item), 1L);
+
+            assertThat(item.getStatusCode()).isEqualTo(BuybackCalculationService.STATUS_OK);
+            assertThat(item.getAppliedModifier()).isEqualTo(80.0);
+        }
+
+        @Test
+        @DisplayName("laesst die Gruppe die Kategorie ueberstimmen")
+        void groupModifierBeatsCategory() {
+            allowCategory(MINERAL_CATEGORY, 90.0);
+            allowGroup(MINERAL_GROUP, 70.0);
+
+            ParsedItemDto item = tritanium(100);
+            service.calculatePrices(List.of(item), 1L);
+
+            assertThat(item.getAppliedModifier()).isEqualTo(70.0);
+        }
+
+        @Test
+        @DisplayName("laesst das Einzelitem die Gruppe ueberstimmen")
+        void itemModifierBeatsGroup() {
+            allowCategory(MINERAL_CATEGORY, 90.0);
+            allowGroup(MINERAL_GROUP, 70.0);
+            allowType(TRITANIUM, 50.0);
+
+            ParsedItemDto item = tritanium(100);
+            service.calculatePrices(List.of(item), 1L);
+
+            assertThat(item.getAppliedModifier()).isEqualTo(50.0);
+        }
+
+        @Test
+        @DisplayName("faellt auf die Kategorie zurueck, wenn die Gruppe keinen eigenen Wert hat")
+        void fallsBackToCategoryWhenGroupHasNoModifier() {
+            allowCategory(MINERAL_CATEGORY, 90.0);
+            allowGroup(MINERAL_GROUP, null);
+
+            ParsedItemDto item = tritanium(100);
+            service.calculatePrices(List.of(item), 1L);
+
+            assertThat(item.getAppliedModifier()).isEqualTo(90.0);
         }
     }
 
@@ -285,7 +373,7 @@ class BuybackCalculationServiceTest {
             when(invTypeRepo.findReprocessMaterials(Set.of(veldspar)))
                     .thenReturn(List.of(new Yield(veldspar, TRITANIUM, 400L, 100)));
             when(invTypeRepo.findTypeDetailsByIds(Set.of(TRITANIUM)))
-                    .thenReturn(List.of(new TypeDetails(TRITANIUM, "Tritanium", 0.01, MINERAL_CATEGORY)));
+                    .thenReturn(List.of(new TypeDetails(TRITANIUM, "Tritanium", 0.01, MINERAL_GROUP, MINERAL_CATEGORY)));
             when(marketService.getJitaPrices(any())).thenReturn(Map.of(TRITANIUM, price(4.0, 5.0)));
 
             location.setTransportFee(100.0); // 100 ISK je m3
@@ -310,7 +398,7 @@ class BuybackCalculationServiceTest {
             when(invTypeRepo.findReprocessMaterials(Set.of(veldspar)))
                     .thenReturn(List.of(new Yield(veldspar, TRITANIUM, 400L, 100)));
             when(invTypeRepo.findTypeDetailsByIds(Set.of(TRITANIUM)))
-                    .thenReturn(List.of(new TypeDetails(TRITANIUM, "Tritanium", 0.01, MINERAL_CATEGORY)));
+                    .thenReturn(List.of(new TypeDetails(TRITANIUM, "Tritanium", 0.01, MINERAL_GROUP, MINERAL_CATEGORY)));
             when(marketService.getJitaPrices(any())).thenReturn(Map.of(TRITANIUM, price(4.0, 5.0)));
 
             location.setTransportFee(100.0);
@@ -407,6 +495,7 @@ class BuybackCalculationServiceTest {
         ParsedItemDto item = new ParsedItemDto();
         item.setTypeId(TRITANIUM);
         item.setRawName("Tritanium");
+        item.setGroupId(MINERAL_GROUP);
         item.setCategoryId(MINERAL_CATEGORY);
         item.setVolumeEach(0.01);
         item.setResolved(true);
@@ -440,6 +529,34 @@ class BuybackCalculationServiceTest {
         when(categoryRuleRepo.findById(categoryId)).thenReturn(Optional.of(rule));
     }
 
+    /**
+     * Gibt eine Gruppe frei.
+     *
+     * @param groupId  die Gruppe
+     * @param modifier der Modifikator, {@code null} = keine eigene Angabe
+     * @return die angelegte Regel, fuer weitere Feineinstellungen
+     */
+    private BuybackGroupRule allowGroup(long groupId, Double modifier) {
+        BuybackGroupRule rule = new BuybackGroupRule();
+        rule.setGroupId(groupId);
+        rule.setModifier(modifier);
+        rule.setIsBlacklisted(false);
+        when(groupRuleRepo.findById(groupId)).thenReturn(Optional.of(rule));
+        return rule;
+    }
+
+    /**
+     * Sperrt eine ganze Gruppe.
+     *
+     * @param groupId die Gruppe
+     */
+    private void blockGroup(long groupId) {
+        BuybackGroupRule rule = new BuybackGroupRule();
+        rule.setGroupId(groupId);
+        rule.setIsBlacklisted(true);
+        when(groupRuleRepo.findById(groupId)).thenReturn(Optional.of(rule));
+    }
+
     private void allowType(long typeId, Double modifier) {
         BuybackTypeRule rule = new BuybackTypeRule();
         rule.setTypeId(typeId);
@@ -463,8 +580,13 @@ class BuybackCalculationServiceTest {
      * @param volume     Volumen je Einheit
      * @param categoryId Kategorie
      */
-    private record TypeDetails(Long typeId, String typeName, Double volume, Long categoryId)
+    private record TypeDetails(Long typeId, String typeName, Double volume, Long groupId, Long categoryId)
             implements TypeDetailsProjection {
+
+        @Override
+        public Long getGroupId() {
+            return groupId;
+        }
 
         @Override
         public Long getTypeId() {
